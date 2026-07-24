@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Civilization of You</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── REPLACE THIS WITH YOUR REAL KEY ── */
+/* See ANTHROPIC_API_KEY in the script below */
+
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#0A0C0F;
+  --parchment:#E8DFC8;
+  --parchment-dark:#C8B99A;
+  --teal:#1B4D4A;
+  --teal-mid:#2A6B67;
+  --teal-light:#3D8B86;
+  --gold:#C9963A;
+  --gold-light:#E8B84B;
+  --gold-dim:#7A5A20;
+  --red:#8B1A1A;
+  --red-light:#C0392B;
+  --fd:'Cinzel',serif;
+  --fb:'Crimson Text',serif;
+  --fm:'JetBrains Mono',monospace;
+}
+
+html,body{width:100%;height:100%;overflow:hidden;background:#0A0C0F;}
+
+#app{
+  width:100%;height:100vh;
+  background:#0A0C0F;
+  font-family:var(--fb);
+  color:var(--parchment);
+  position:relative;
+  overflow:hidden;
+}
+
+/* ════════════════════════════════════
+   LOAD SCREEN
+════════════════════════════════════ */
+#load-screen{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse at center,#0F1E1D 0%,#0A0C0F 70%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:100;
+  transition:opacity 0.9s ease;
+}
+#load-screen.out{opacity:0;pointer-events:none;}
+
+.ls-seal{
+  width:110px;height:110px;margin-bottom:1.75rem;
+  animation:sealGlow 2.5s ease-in-out infinite;
+}
+@keyframes sealGlow{
+  0%,100%{filter:drop-shadow(0 0 10px rgba(201,150,58,0.35));transform:scale(1);}
+  50%{filter:drop-shadow(0 0 22px rgba(201,150,58,0.75));transform:scale(1.03);}
+}
+.ls-title{
+  font-family:var(--fd);font-size:26px;font-weight:700;
+  color:var(--gold);letter-spacing:0.12em;text-align:center;margin-bottom:0.35rem;
+}
+.ls-sub{
+  font-family:var(--fd);font-size:10px;font-weight:400;
+  color:var(--parchment-dark);letter-spacing:0.3em;text-transform:uppercase;
+  margin-bottom:2.25rem;
+}
+.ls-tip-box{
+  max-width:460px;text-align:center;
+  padding:1.25rem 1.75rem;
+  border:1px solid var(--gold-dim);border-radius:3px;
+  background:rgba(201,150,58,0.04);
+  margin-bottom:2.25rem;min-height:90px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.ls-tip-lbl{
+  font-family:var(--fd);font-size:8px;letter-spacing:0.3em;
+  color:var(--gold);text-transform:uppercase;margin-bottom:0.6rem;
+}
+.ls-tip-text{
+  font-style:italic;font-size:14px;color:var(--parchment);line-height:1.65;
+}
+.ls-bar-wrap{width:220px;height:2px;background:rgba(201,150,58,0.15);border-radius:2px;overflow:hidden;margin-bottom:1.5rem;}
+.ls-bar-fill{height:100%;background:var(--gold);border-radius:2px;animation:loadFill 3s ease forwards;}
+@keyframes loadFill{from{width:0%}to{width:100%}}
+.ls-btn{
+  font-family:var(--fd);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--ink);background:var(--gold);border:none;
+  padding:11px 32px;border-radius:2px;cursor:pointer;
+  opacity:0;transition:opacity 0.6s,background 0.2s,transform 0.15s;
+}
+.ls-btn.show{opacity:1;}
+.ls-btn:hover{background:var(--gold-light);transform:translateY(-1px);}
+
+/* ════════════════════════════════════
+   ONBOARDING
+════════════════════════════════════ */
+#onboarding{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse at 30% 40%,#0F1E1D 0%,#0A0C0F 70%);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  z-index:90;padding:2rem 1.5rem;overflow-y:auto;
+}
+#onboarding.active{display:flex;}
+
+#ob-prog{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(201,150,58,0.12);}
+#ob-prog-fill{height:100%;background:var(--gold);transition:width 0.5s ease;width:0%;}
+#ob-hdr{position:absolute;top:10px;left:0;right:0;padding:0 2rem;display:flex;align-items:center;gap:1rem;}
+#ob-blk-lbl{font-family:var(--fd);font-size:9px;letter-spacing:0.3em;color:var(--gold);text-transform:uppercase;}
+#ob-dots{display:flex;gap:6px;margin-left:auto;}
+.ob-dot{width:7px;height:7px;border-radius:50%;background:rgba(201,150,58,0.18);transition:background 0.4s;}
+.ob-dot.done{background:var(--gold);}
+.ob-dot.active{background:var(--gold-light);box-shadow:0 0 5px rgba(232,184,75,0.5);}
+
+.ob-advisor{display:flex;align-items:flex-start;gap:1rem;max-width:540px;width:100%;margin-bottom:1.75rem;}
+.ob-portrait{
+  width:46px;height:46px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--teal),var(--ink));
+  border:2px solid var(--gold-dim);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.ob-bubble{
+  background:rgba(27,77,74,0.18);border:1px solid rgba(201,150,58,0.22);
+  border-radius:3px 12px 12px 12px;padding:0.875rem 1.1rem;flex:1;
+}
+.ob-adv-txt{font-style:italic;font-size:14px;line-height:1.7;color:var(--parchment);}
+.ob-cursor{display:inline-block;width:2px;height:13px;background:var(--gold);animation:blink 0.75s infinite;vertical-align:middle;margin-left:1px;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.ob-card{max-width:540px;width:100%;opacity:0;transform:translateY(10px);transition:opacity 0.4s,transform 0.4s;}
+.ob-card.vis{opacity:1;transform:translateY(0);}
+.ob-qlbl{font-family:var(--fd);font-size:9px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;margin-bottom:0.5rem;}
+.ob-qtxt{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--parchment);line-height:1.45;margin-bottom:1.1rem;}
+
+.ob-input{
+  width:100%;background:rgba(232,223,200,0.06);
+  border:1px solid rgba(201,150,58,0.3);border-radius:3px;
+  padding:0.7rem 0.9rem;color:var(--parchment);
+  font-family:var(--fb);font-size:14px;line-height:1.6;
+  outline:none;resize:none;display:block;
+}
+.ob-input:focus{border-color:var(--gold);}
+.ob-input::placeholder{color:var(--parchment-dark);font-style:italic;}
+
+.ob-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px;}
+.ob-chip{
+  font-family:var(--fd)!important;font-size:10px!important;
+  letter-spacing:0.08em;padding:8px 14px;
+  border:1.5px solid rgba(201,150,58,0.4)!important;border-radius:3px;
+  cursor:pointer;color:var(--parchment-dark)!important;
+  background:#0F1A19!important;transition:all 0.18s;
+  line-height:1.3;display:inline-block;-webkit-appearance:none;appearance:none;
+}
+.ob-chip:hover{border-color:var(--gold)!important;color:var(--parchment)!important;background:#162422!important;}
+.ob-chip.sel{border-color:var(--gold)!important;background:rgba(201,150,58,0.16)!important;color:var(--gold)!important;}
+.ob-chip-sub{display:block;font-family:var(--fb)!important;font-size:11px!important;font-style:italic;color:var(--parchment-dark);margin-top:3px;letter-spacing:0;}
+.ob-chip.era{flex:1;min-width:140px;text-align:center;padding:11px 8px;}
+.ob-fog-btn{
+  margin-top:0.7rem;font-family:var(--fd);font-size:9px;letter-spacing:0.15em;
+  color:var(--parchment-dark);background:transparent;border:none;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;padding:0;display:block;
+}
+.ob-fog-btn:hover{color:var(--gold-dim);}
+.ob-nav{display:flex;align-items:center;justify-content:space-between;margin-top:1.1rem;}
+.ob-back{
+  font-family:var(--fd);font-size:9px;letter-spacing:0.15em;
+  color:var(--parchment-dark);background:transparent;
+  border:1px solid rgba(201,150,58,0.22);padding:7px 14px;
+  border-radius:2px;cursor:pointer;transition:all 0.2s;
+}
+.ob-back:hover{border-color:var(--gold-dim);color:var(--parchment);}
+.ob-next{
+  font-family:var(--fd)!important;font-size:10px!important;letter-spacing:0.2em;
+  text-transform:uppercase;color:var(--ink)!important;
+  background:var(--gold)!important;border:none!important;
+  padding:10px 28px;border-radius:2px;cursor:pointer;
+  transition:background 0.2s,transform 0.15s;margin-left:auto;-webkit-appearance:none;
+}
+.ob-next:hover{background:var(--gold-light)!important;transform:translateY(-1px);}
+
+#ob-bt{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:#0A0C0F;z-index:30;opacity:0;pointer-events:none;transition:opacity 0.35s;
+}
+#ob-bt.show{opacity:1;pointer-events:all;}
+.ob-bt-seal{font-size:58px;animation:stamp 0.4s cubic-bezier(0.36,0.07,0.19,0.97);}
+@keyframes stamp{0%{transform:scale(2.2);opacity:0}65%{transform:scale(0.92)}100%{transform:scale(1);opacity:1}}
+.ob-bt-lbl{font-family:var(--fd);font-size:12px;letter-spacing:0.3em;color:var(--gold);margin-top:1rem;text-transform:uppercase;}
+
+#ob-finale{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:#0A0C0F;z-index:40;opacity:0;pointer-events:none;
+  transition:opacity 0.8s;padding:2rem;text-align:center;
+}
+#ob-finale.show{opacity:1;pointer-events:all;}
+.fin-seal{font-size:68px;margin-bottom:1.25rem;}
+.fin-title{font-family:var(--fd);font-size:21px;font-weight:700;color:var(--gold);letter-spacing:0.1em;margin-bottom:0.4rem;}
+.fin-civ{font-family:var(--fd);font-size:12px;color:var(--parchment-dark);letter-spacing:0.2em;margin-bottom:1.5rem;}
+.fin-mono{max-width:460px;font-style:italic;font-size:14px;color:var(--parchment);line-height:1.85;margin-bottom:2rem;}
+.fin-btn{
+  font-family:var(--fd)!important;font-size:11px!important;letter-spacing:0.25em;
+  text-transform:uppercase;color:var(--ink)!important;
+  background:var(--gold)!important;border:none!important;
+  padding:13px 38px;border-radius:2px;cursor:pointer;
+  transition:background 0.2s,transform 0.15s;-webkit-appearance:none;
+}
+.fin-btn:hover{background:var(--gold-light)!important;transform:translateY(-2px);}
+
+/* ════════════════════════════════════
+   GAME SHELL
+════════════════════════════════════ */
+#game{position:absolute;inset:0;display:none;flex-direction:column;}
+#game.active{display:flex;}
+
+/* TOP BAR */
+#top-bar{
+  height:46px;flex-shrink:0;
+  background:linear-gradient(180deg,#0F1A19 0%,#0A1210 100%);
+  border-bottom:1px solid var(--gold-dim);
+  display:flex;align-items:center;padding:0 1rem;gap:0;
+}
+.tb-brand{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--gold);letter-spacing:0.1em;margin-right:auto;}
+.tb-brand span{font-size:9px;font-weight:400;color:var(--parchment-dark);letter-spacing:0.2em;display:block;}
+.tb-stats{display:flex;align-items:center;gap:1.25rem;margin:0 1.25rem;}
+.tb-stat{display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:10px;color:var(--parchment-dark);}
+.tb-stat-icon{font-size:12px;color:var(--gold);}
+.tb-stat-val{color:var(--parchment);font-weight:500;}
+.tb-nav{display:flex;align-items:center;gap:3px;}
+.tb-btn{
+  font-family:var(--fd);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--parchment-dark);background:transparent;
+  border:1px solid transparent;padding:4px 9px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+}
+.tb-btn:hover,.tb-btn.active{color:var(--gold);border-color:var(--gold-dim);background:rgba(201,150,58,0.07);}
+.tb-gear{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid var(--gold-dim);border-radius:2px;
+  cursor:pointer;color:var(--parchment-dark);font-size:14px;margin-left:6px;transition:all 0.2s;
+}
+.tb-gear:hover{color:var(--gold);border-color:var(--gold);}
+
+/* BODY */
+#game-body{display:flex;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+#sidebar{
+  width:210px;min-width:210px;flex-shrink:0;
+  background:linear-gradient(180deg,#0C1918 0%,#080F0E 100%);
+  border-right:1px solid var(--gold-dim);
+  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+}
+.sb-sec{padding:0.8rem 0.9rem;border-bottom:1px solid rgba(201,150,58,0.12);}
+.sb-lbl{
+  font-family:var(--fd);font-size:8px;letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:0.55rem;display:flex;align-items:center;gap:5px;
+}
+.sb-lbl::after{content:'';flex:1;height:1px;background:rgba(201,150,58,0.18);}
+.age-name{font-family:var(--fd);font-size:12px;font-weight:600;color:var(--parchment);margin-bottom:3px;}
+.age-sub{font-size:11px;color:var(--parchment-dark);font-style:italic;margin-bottom:7px;}
+.xp-wrap{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;margin-bottom:4px;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width 0.5s ease;}
+.xp-lbl{font-family:var(--fm);font-size:9px;color:var(--parchment-dark);}
+.terr-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+.terr-name{font-size:10px;width:68px;flex-shrink:0;}
+.terr-bar{flex:1;height:5px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;}
+.terr-fill-t{background:var(--teal-light);height:100%;border-radius:3px;transition:width 0.5s;}
+.terr-fill-r{background:var(--red);height:100%;border-radius:3px;transition:width 0.5s;}
+.terr-pct{font-family:var(--fm);font-size:9px;width:26px;text-align:right;}
+.streak-row{display:flex;align-items:center;gap:7px;}
+.streak-num{font-family:var(--fd);font-size:19px;font-weight:700;color:var(--gold);}
+.streak-txt{font-size:10px;color:var(--parchment-dark);line-height:1.3;}
+.quest-card{background:rgba(201,150,58,0.05);border:1px solid rgba(201,150,58,0.18);border-radius:3px;padding:0.6rem 0.7rem;margin-bottom:5px;}
+.quest-title{font-family:var(--fd);font-size:8px;letter-spacing:0.1em;color:var(--gold);margin-bottom:3px;}
+.quest-txt{font-size:11px;color:var(--parchment);line-height:1.45;font-style:italic;}
+.quest-open{
+  width:100%;margin-top:5px;font-family:var(--fd);font-size:8px;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--gold);background:transparent;
+  border:1px solid var(--gold-dim);padding:4px 0;border-radius:2px;cursor:pointer;transition:all 0.2s;
+}
+.quest-open:hover{background:rgba(201,150,58,0.1);}
+
+/* MAP */
+#map-area{flex:1;position:relative;background:#0B1A18;overflow:hidden;}
+#hex-canvas{position:absolute;inset:0;width:100%;height:100%;}
+
+/* ADVISOR PANEL */
+#adv-panel{
+  position:absolute;bottom:18px;right:18px;width:290px;
+  background:linear-gradient(135deg,#0F1E1D 0%,#0A1210 100%);
+  border:1px solid var(--gold-dim);border-radius:4px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.55);z-index:20;
+  transition:all 0.3s ease;
+}
+#adv-panel.mini{
+  width:48px;height:48px;border-radius:50%;overflow:hidden;
+  cursor:pointer;bottom:18px;right:18px;
+}
+.adv-hdr{display:flex;align-items:center;gap:0;padding:0.6rem 0.7rem;border-bottom:1px solid rgba(201,150,58,0.18);}
+.adv-portrait{
+  width:40px;height:40px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--teal),var(--ink));
+  border:2px solid var(--gold-dim);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.adv-name-wrap{flex:1;padding:0 0.6rem;}
+.adv-name{font-family:var(--fd);font-size:9px;font-weight:600;color:var(--gold);letter-spacing:0.1em;}
+.adv-title{font-size:9px;color:var(--parchment-dark);font-style:italic;}
+.adv-min{
+  width:22px;height:22px;background:transparent;border:1px solid var(--gold-dim);
+  border-radius:2px;color:var(--parchment-dark);font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all 0.2s;line-height:1;
+}
+.adv-min:hover{color:var(--gold);border-color:var(--gold);}
+.adv-body{padding:0.7rem;max-height:150px;overflow-y:auto;}
+.adv-dialogue{font-size:12px;font-style:italic;color:var(--parchment);line-height:1.6;margin-bottom:0.7rem;}
+.adv-loading{font-size:11px;color:var(--gold-dim);font-style:italic;animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}
+.log-btn{
+  width:100%;font-family:var(--fd);font-size:8px;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--ink);background:var(--gold);border:none;padding:6px 0;border-radius:2px;cursor:pointer;transition:background 0.2s;
+}
+.log-btn:hover{background:var(--gold-light);}
+
+/* OVERLAY PAGES */
+.page{position:absolute;inset:0;background:#0A0C0F;z-index:50;display:none;flex-direction:column;overflow:hidden;}
+.page.open{display:flex;}
+.page-hdr{
+  padding:0.9rem 1.4rem;border-bottom:1px solid var(--gold-dim);
+  display:flex;align-items:center;gap:1rem;background:#0C1918;flex-shrink:0;
+}
+.page-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--gold);letter-spacing:0.08em;flex:1;}
+.page-close{
+  font-family:var(--fd);font-size:8px;letter-spacing:0.18em;color:var(--parchment-dark);
+  background:transparent;border:1px solid var(--gold-dim);padding:4px 11px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+}
+.page-close:hover{color:var(--gold);border-color:var(--gold);}
+.page-body{flex:1;overflow-y:auto;padding:1.4rem;}
+
+/* JOURNAL */
+.j-entry-area{background:rgba(255,255,255,0.02);border:1px solid var(--gold-dim);border-radius:3px;padding:0.9rem;margin-bottom:0.9rem;}
+.j-entry-lbl{font-family:var(--fd);font-size:8px;letter-spacing:0.2em;color:var(--gold);margin-bottom:0.45rem;}
+.j-ta{
+  width:100%;background:transparent;border:none;color:var(--parchment);
+  font-family:var(--fb);font-size:14px;line-height:1.7;resize:none;outline:none;min-height:100px;
+}
+.j-ta::placeholder{color:var(--parchment-dark);font-style:italic;}
+.j-save{
+  font-family:var(--fd);font-size:8px;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--ink);background:var(--gold);border:none;padding:6px 18px;border-radius:2px;cursor:pointer;transition:background 0.2s;
+}
+.j-save:hover{background:var(--gold-light);}
+.j-past{border-bottom:1px solid rgba(201,150,58,0.12);padding:0.7rem 0;}
+.j-past-date{font-family:var(--fm);font-size:8px;color:var(--gold-dim);margin-bottom:3px;}
+.j-past-txt{font-size:13px;font-style:italic;color:var(--parchment-dark);line-height:1.5;}
+
+/* CHRONICLE */
+.chr-section{margin-bottom:1.75rem;}
+.chr-section-title{font-family:var(--fd);font-size:9px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;border-bottom:1px solid rgba(201,150,58,0.18);padding-bottom:0.4rem;margin-bottom:0.9rem;}
+.chr-row{display:flex;gap:0.75rem;margin-bottom:0.6rem;}
+.chr-key{font-family:var(--fd);font-size:10px;color:var(--parchment-dark);width:120px;flex-shrink:0;}
+.chr-val{font-size:13px;color:var(--parchment);font-style:italic;line-height:1.5;flex:1;}
+
+/* REWARDS */
+.reward-card{
+  border:1px solid rgba(201,150,58,0.18);border-radius:3px;
+  padding:0.8rem 0.9rem;margin-bottom:0.7rem;
+  transition:border-color 0.3s,background 0.3s;
+}
+.reward-card.unlocked{border-color:var(--gold);background:rgba(201,150,58,0.05);}
+.reward-milestone{font-family:var(--fd);font-size:8px;letter-spacing:0.15em;color:var(--gold-dim);margin-bottom:3px;}
+.reward-title{font-family:var(--fd);font-size:11px;color:var(--gold);margin-bottom:5px;}
+.reward-desc{font-size:12px;font-style:italic;color:var(--parchment-dark);line-height:1.45;}
+.reward-locked{font-family:var(--fd);font-size:8px;color:var(--parchment-dark);margin-top:5px;letter-spacing:0.1em;}
+.reward-claim{
+  margin-top:6px;font-family:var(--fd);font-size:8px;letter-spacing:0.15em;
+  color:var(--ink);background:var(--gold);border:none;padding:4px 14px;border-radius:2px;cursor:pointer;
+}
+
+/* SETTINGS */
+.set-section{margin-bottom:1.5rem;}
+.set-title{font-family:var(--fd);font-size:9px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;border-bottom:1px solid rgba(201,150,58,0.18);padding-bottom:0.4rem;margin-bottom:0.85rem;}
+.set-row{display:flex;align-items:center;gap:0.9rem;margin-bottom:0.65rem;}
+.set-row label{font-size:12px;color:var(--parchment-dark);width:70px;flex-shrink:0;}
+.set-row input[type=range]{flex:1;accent-color:var(--gold);}
+.set-btn{
+  display:block;width:100%;font-family:var(--fd);font-size:9px;letter-spacing:0.13em;text-transform:uppercase;
+  color:var(--parchment);background:transparent;border:1px solid var(--gold-dim);
+  padding:0.6rem 1rem;border-radius:2px;cursor:pointer;text-align:left;margin-bottom:0.45rem;transition:all 0.2s;
+}
+.set-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(201,150,58,0.05);}
+
+/* TUTORIAL / NOTE */
+.tut-section{margin-bottom:1.75rem;}
+.tut-title{font-family:var(--fd);font-size:9px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;margin-bottom:0.6rem;}
+.tut-txt{font-size:14px;color:var(--parchment);line-height:1.75;}
+.mandi-note{
+  background:var(--parchment);color:#3A2A10;
+  padding:1.75rem;border-radius:3px;max-width:500px;margin:0 auto;
+}
+.mandi-note-txt{font-family:var(--fb);font-size:16px;line-height:1.85;font-style:italic;color:#3A2A10;}
+.mandi-sig{margin-top:1.25rem;font-family:var(--fb);font-size:17px;font-weight:600;color:var(--red);text-align:right;}
+.mandi-seal{text-align:center;margin-top:1.25rem;font-size:28px;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ LOAD SCREEN ══════════ -->
+  <div id="load-screen">
+    <svg class="ls-seal" viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="55" cy="55" r="51" fill="#0F1E1D" stroke="#7A5A20" stroke-width="1.5"/>
+      <circle cx="55" cy="55" r="46" fill="none" stroke="#C9963A" stroke-width="0.5" stroke-dasharray="3 4"/>
+      <text x="55" y="71" text-anchor="middle" font-family="serif" font-size="37" fill="#C9963A">泰</text>
+      <circle cx="55" cy="55" r="51" fill="none" stroke="#C9963A" stroke-width="0.8"/>
+    </svg>
+    <div class="ls-title">The Civilization of You</div>
+    <div class="ls-sub">A campaign of self-discovery &nbsp;·&nbsp; Founded for Teddy</div>
+    <div class="ls-tip-box">
+      <div class="ls-tip-lbl">The Advisor's counsel</div>
+      <div class="ls-tip-text" id="ls-tip"></div>
+    </div>
+    <div class="ls-bar-wrap"><div class="ls-bar-fill"></div></div>
+    <button class="ls-btn" id="ls-btn" onclick="enterOnboarding()">Begin the Founding</button>
+  </div>
+
+  <!-- ══════════ ONBOARDING ══════════ -->
+  <div id="onboarding">
+    <div id="ob-prog"><div id="ob-prog-fill"></div></div>
+    <div id="ob-hdr">
+      <div id="ob-blk-lbl">Identity</div>
+      <div id="ob-dots"></div>
+    </div>
+    <div class="ob-advisor">
+      <div class="ob-portrait">🧙‍♀️</div>
+      <div class="ob-bubble"><div class="ob-adv-txt" id="ob-adv"></div></div>
+    </div>
+    <div class="ob-card" id="ob-card">
+      <div class="ob-qlbl" id="ob-qlbl"></div>
+      <div class="ob-qtxt" id="ob-qtxt"></div>
+      <div id="ob-answer"></div>
+      <button class="ob-fog-btn" id="ob-fog-btn" onclick="fogIt()">I don't have an answer for this yet →</button>
+      <div class="ob-nav">
+        <button class="ob-back" id="ob-back" onclick="goBack()">← Back</button>
+        <button class="ob-next" onclick="goNext()">Continue →</button>
+      </div>
+    </div>
+    <div id="ob-bt">
+      <div class="ob-bt-seal">🔴</div>
+      <div class="ob-bt-lbl" id="ob-bt-lbl"></div>
+    </div>
+    <div id="ob-finale">
+      <div class="fin-seal">🔴</div>
+      <div class="fin-title">The Civilization is Founded</div>
+      <div class="fin-civ" id="fin-civ"></div>
+      <div class="fin-mono" id="fin-mono"></div>
+      <button class="fin-btn" onclick="enterGame()">Begin the Campaign →</button>
+    </div>
+  </div>
+
+  <!-- ══════════ GAME SHELL ══════════ -->
+  <div id="game">
+    <div id="top-bar">
+      <div class="tb-brand">
+        The Civilization of You
+        <span id="tb-age-lbl">Age I · The Settlement</span>
+      </div>
+      <div class="tb-stats">
+        <div class="tb-stat"><span class="tb-stat-icon">✦</span><span>IP</span><span class="tb-stat-val" id="tb-ip">0</span></div>
+        <div class="tb-stat"><span class="tb-stat-icon">🔥</span><span>Streak</span><span class="tb-stat-val" id="tb-streak">0</span></div>
+        <div class="tb-stat"><span class="tb-stat-icon">⚔</span><span>Turn</span><span class="tb-stat-val" id="tb-turn">1</span></div>
+      </div>
+      <div class="tb-nav">
+        <button class="tb-btn active" onclick="showPage('map')">Map</button>
+        <button class="tb-btn" onclick="showPage('journal')">Journal</button>
+        <button class="tb-btn" onclick="showPage('chronicle')">Chronicle</button>
+        <button class="tb-btn" onclick="showPage('rewards')">Decrees</button>
+      </div>
+      <button class="tb-gear" onclick="showPage('settings')">⚙</button>
+    </div>
+
+    <div id="game-body">
+      <!-- SIDEBAR -->
+      <div id="sidebar">
+        <div class="sb-sec">
+          <div class="sb-lbl">Age</div>
+          <div class="age-name" id="sb-age-name">Age I — The Settlement</div>
+          <div class="age-sub" id="sb-age-sub">Turn 1 of the campaign</div>
+          <div class="xp-wrap"><div class="xp-fill" id="sb-xp" style="width:0%"></div></div>
+          <div class="xp-lbl" id="sb-xp-lbl">0 / 100 IP to Age II</div>
+        </div>
+        <div class="sb-sec">
+          <div class="sb-lbl">Territory</div>
+          <div class="terr-row">
+            <div class="terr-name" style="color:var(--teal-light)" id="sb-t-name">Teddy</div>
+            <div class="terr-bar"><div class="terr-fill-t" id="sb-t-fill" style="width:4%"></div></div>
+            <div class="terr-pct" style="color:var(--teal-light)" id="sb-t-pct">4%</div>
+          </div>
+          <div class="terr-row">
+            <div class="terr-name" style="color:var(--red-light)" id="sb-r-name">Joseon Korea</div>
+            <div class="terr-bar"><div class="terr-fill-r" id="sb-r-fill" style="width:2%"></div></div>
+            <div class="terr-pct" style="color:var(--red-light)" id="sb-r-pct">2%</div>
+          </div>
+        </div>
+        <div class="sb-sec">
+          <div class="sb-lbl">Streak</div>
+          <div class="streak-row">
+            <span style="font-size:17px">🔥</span>
+            <span class="streak-num" id="sb-streak">0</span>
+            <div class="streak-txt">days<br>consecutive</div>
+          </div>
+        </div>
+        <div class="sb-sec" style="flex:1;border-bottom:none;">
+          <div class="sb-lbl">Today's Quest</div>
+          <div class="quest-card">
+            <div class="quest-title">Royal Decree</div>
+            <div class="quest-txt" id="sb-quest-txt">Loading your quest...</div>
+            <button class="quest-open" onclick="showPage('journal')">Open Journal →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAP -->
+      <div id="map-area">
+        <canvas id="hex-canvas"></canvas>
+        <div id="adv-panel">
+          <div class="adv-hdr">
+            <div class="adv-portrait">🧙‍♀️</div>
+            <div class="adv-name-wrap">
+              <div class="adv-name">The Sage</div>
+              <div class="adv-title">Advisor to the Civilization</div>
+            </div>
+            <button class="adv-min" onclick="toggleAdvisor()">−</button>
+          </div>
+          <div class="adv-body" id="adv-body">
+            <div class="adv-dialogue" id="adv-dialogue">The campaign begins. I have the map of who you are. Let us build.</div>
+            <button class="log-btn" onclick="showPage('journal')">Log a Deed</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOURNAL PAGE -->
+    <div class="page" id="page-journal">
+      <div class="page-hdr">
+        <div class="page-title">⚔ The War Journal</div>
+        <button class="page-close" onclick="closePage('journal')">← Back to Map</button>
+      </div>
+      <div class="page-body">
+        <div class="j-entry-area">
+          <div class="j-entry-lbl" id="j-quest-lbl">Today's Quest</div>
+          <textarea class="j-ta" id="j-input" placeholder="Write your response here..."></textarea>
+        </div>
+        <button class="j-save" onclick="saveEntry()">Save & Earn IP ✦</button>
+        <div style="margin-top:1.75rem;">
+          <div class="sb-lbl" style="font-size:8px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;margin-bottom:0.9rem;">Past Entries</div>
+          <div id="j-past"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHRONICLE PAGE -->
+    <div class="page" id="page-chronicle">
+      <div class="page-hdr">
+        <div class="page-title">📜 The Chronicle</div>
+        <button class="page-close" onclick="closePage('chronicle')">← Back to Map</button>
+      </div>
+      <div class="page-body">
+        <div style="text-align:center;margin-bottom:2rem;">
+          <svg width="56" height="56" viewBox="0 0 110 110" fill="none">
+            <circle cx="55" cy="55" r="51" fill="none" stroke="#7A5A20" stroke-width="1.5"/>
+            <text x="55" y="71" text-anchor="middle" font-family="serif" font-size="37" fill="#C9963A">泰</text>
+          </svg>
+          <div style="font-family:var(--fd);font-size:16px;color:var(--gold);margin-top:0.5rem;" id="chr-civ-title">Your Civilization</div>
+          <div style="font-size:12px;color:var(--parchment-dark);font-style:italic;" id="chr-sub">Age I · The Settlement</div>
+        </div>
+        <div id="chr-content"></div>
+      </div>
+    </div>
+
+    <!-- REWARDS PAGE -->
+    <div class="page" id="page-rewards">
+      <div class="page-hdr">
+        <div class="page-title">👑 Royal Decrees</div>
+        <button class="page-close" onclick="closePage('rewards')">← Back to Map</button>
+      </div>
+      <div class="page-body">
+        <div style="font-size:13px;color:var(--parchment-dark);font-style:italic;margin-bottom:1.25rem;">Rewards issued by the Crown. Earn them in the field. Claim them with your benefactor.</div>
+        <div id="rewards-list"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="page-hdr">
+        <div class="page-title">⚙ Settings</div>
+        <button class="page-close" onclick="closePage('settings')">← Back to Map</button>
+      </div>
+      <div class="page-body">
+        <div class="set-section">
+          <div class="set-title">Audio</div>
+          <div class="set-row"><label>Music</label><input type="range" min="0" max="100" value="70" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="font-family:var(--fm);font-size:10px;color:var(--parchment-dark);width:30px">70%</span></div>
+          <div class="set-row"><label>SFX</label><input type="range" min="0" max="100" value="80" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="font-family:var(--fm);font-size:10px;color:var(--parchment-dark);width:30px">80%</span></div>
+        </div>
+        <div class="set-section">
+          <div class="set-title">Campaign</div>
+          <button class="set-btn" onclick="showPage('tutorial')">📖 &nbsp; Revisit the Tutorial</button>
+          <button class="set-btn" onclick="showPage('note')">💌 &nbsp; Read Mandi's Note</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TUTORIAL PAGE -->
+    <div class="page" id="page-tutorial">
+      <div class="page-hdr">
+        <div class="page-title">📖 How to Play</div>
+        <button class="page-close" onclick="closePage('tutorial')">← Back</button>
+      </div>
+      <div class="page-body" style="max-width:580px;">
+        <div class="tut-section"><div class="tut-title">The Ages</div><div class="tut-txt">There are 8 Ages — from the Settlement to the Legacy. You advance by doing, not by reading. Every quest completed and every deed logged earns Influence Points that build your civilization. Each Age unlocks stronger buildings, new map districts, and new abilities to push back your rival.</div></div>
+        <div class="tut-section"><div class="tut-title">The Rival</div><div class="tut-txt">Your rival civilization does not wait for you. They expand on their own schedule toward January. The more you log and complete, the more territory you claim. January is the final turn — whoever holds more of the realm wins the campaign.</div></div>
+        <div class="tut-section"><div class="tut-title">The Daily Loop</div><div class="tut-txt">Each day you log in, the Advisor issues a quest. Open the Journal to respond. You can also log any real-world deed at any time — a networking email sent, a resume updated, a hard conversation had. Anything counts. It all builds your empire.</div></div>
+        <div class="tut-section"><div class="tut-title">The Win Condition</div><div class="tut-txt">January is not just a job deadline. It's the end of a campaign where you figured out who you are and what you want. Your win condition is whatever you defined it to be. The game exists to get you there.</div></div>
+        <div style="margin-top:2rem;"><div class="mandi-note"><div class="mandi-note-txt">Before you begin — this game was made for you, specifically. I know you've been in a fog lately and I know January feels heavy. I built this because I believe you have a plan inside you that just needs somewhere to live. Play it honestly. The Advisor will push you, and so will I. I love you and I cannot wait to hear about your first move.</div><div class="mandi-sig">— M</div><div class="mandi-seal">🔴</div></div></div>
+      </div>
+    </div>
+
+    <!-- NOTE PAGE -->
+    <div class="page" id="page-note">
+      <div class="page-hdr">
+        <div class="page-title">💌 A Note from Mandi</div>
+        <button class="page-close" onclick="closePage('note')">← Back</button>
+      </div>
+      <div class="page-body" style="display:flex;align-items:center;justify-content:center;min-height:300px;">
+        <div class="mandi-note"><div class="mandi-note-txt">Before you begin — this game was made for you, specifically. I know you've been in a fog lately and I know January feels heavy. I built this because I believe you have a plan inside you that just needs somewhere to live. Play it honestly. The Advisor will push you, and so will I. I love you and I cannot wait to hear about your first move.</div><div class="mandi-sig">— M</div><div class="mandi-seal">🔴</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// !! REPLACE WITH YOUR REAL KEY !!
+const ANTHROPIC_API_KEY = "YOUR_API_KEY_HERE";
+// ══════════════════════════════════════
+
+// DEMO answers — replaced by real onboarding when Teddy plays
+const DEMO_ANSWERS = {
+  civ_name:"The Rising Order",
+  traits:["Strategist","Scholar","Diplomat","Analyst"],
+  creed:"I know how to make a plan, and I can learn anything.",
+  rival:"Joseon Korea",
+  era:"Dark Age",
+  proud:"Showing up every day even when I didn't want to.",
+  avoiding:"Taking myself seriously.",
+  vision:"Become a recognized voice in Asian foreign policy — someone who shapes how the US engages with the region.",
+  tuesday:"Wake up early, go to the gym, get to the office on something I actually believe in, come home feeling like I used myself well.",
+  win:"A job I respect, a budget that gives me breathing room, and a clearer sense of who I am and what I'm building toward.",
+  fear:"Failure — specifically, trying for something real and watching it not work.",
+  false_story:"That I'm not the kind of person who succeeds at the things that actually matter to me.",
+  evidence:"I have never failed completely. Every setback I've had, I came back from. I have people in my corner and I'm still in the game.",
+  hist:"George Kennan",
+  contact:"A former colleague from the Hill",
+  ask:"What their path looked like after their office closed, and whether they'd be willing to grab coffee."
+};
+
+const BLOCKS=[{label:'Identity',qs:[0,1,2,3]},{label:'Reality',qs:[4,5,6]},{label:'Vision',qs:[7,8,9]},{label:'Obstacles',qs:[10,11,12]},{label:'Network',qs:[13,14,15]}];
+const QS=[
+  {id:'civ_name',lbl:'Identity · I of IV',adv:"Before we chart the realm, I need to know what we're building. Every great civilization begins with a name — not a placeholder, but a declaration. What do you call this civilization?",q:"Name your civilization.",type:'text',ph:'The name of your civilization...',fog:"The name will come. For now we call it 'The Unnamed Age' — fog territory, not yet charted."},
+  {id:'traits',lbl:'Identity · II of IV',adv:"A leader is not their job title. A leader is a pattern of choices made when nobody is keeping score. Choose the words below that have been true about you, even when your situation wasn't.",q:"Select your leader traits — choose as many as feel honest.",type:'multi',opts:['Strategist','Scholar','Builder','Diplomat','Visionary','Protector','Analyst','Connector'],fog:"No traits feel honest right now. That's the starting point, not the verdict."},
+  {id:'creed',lbl:'Identity · III of IV',adv:"Every civilization runs on a creed — a sentence that tells the world what it stands for when things get hard. It doesn't have to be noble. It has to be yours.",q:"Write your personal creed in one sentence.",type:'text',ph:'At my best, I am someone who...',fog:"The creed is fog. We'll find it in the campaign."},
+  {id:'rival',lbl:'Identity · IV of IV',adv:"Every civilization needs worthy opposition. The rival doesn't hate you — it simply doesn't wait for you. Choose the empire that will advance on your territory while you find your footing.",q:"Choose your rival civilization.",type:'single',opts:['Han Dynasty','Joseon Korea','Tang Dynasty','Mongol Empire','Ming Dynasty'],fog:null},
+  {id:'era',lbl:'Reality · I of III',adv:"I've learned not to trust the answer a leader gives when they're trying to look good. So I'll ask plainly: where are you right now? Not where you wish you were. Where you actually are.",q:"Honestly — where are you right now?",type:'era',opts:['Dark Age','Age of Rebuilding','Golden Age Dawning'],subs:['Low, flat, running on empty','Moving again, slowly','Something is shifting — I can feel it'],fog:null},
+  {id:'proud',lbl:'Reality · II of III',adv:"Before we chart the fog, I want to know what's already on the map. The last year has not been nothing — even if it felt that way. Tell me one thing.",q:"What's one thing from the last year you're proud of, even if it feels small?",type:'text',ph:'It could be anything. It counts.',fog:"Nothing comes to mind. We mark this as protected territory — the Advisor knows it exists even if you can't name it today."},
+  {id:'avoiding',lbl:'Reality · III of III',adv:"Now the harder one. There is always something a leader knows they should do that they haven't done. It sits at the edge of the map like a territory you keep riding past. Name it.",q:"What's one thing you've been avoiding that you know matters?",type:'text',ph:'The thing I keep not doing is...',fog:"It's in the fog. We'll find it."},
+  {id:'vision',lbl:'Vision · I of III',adv:"Here is the question most leaders have never let themselves answer honestly. Money isn't a factor. Fear isn't a factor. Location doesn't exist. What is the boldest life you can imagine?",q:"Your Great Vision — the boldest life, if nothing stood in the way.",type:'area',ph:'In this life, I would...',fog:"The vision is in fog. That's not a problem — it means we haven't found the door yet."},
+  {id:'tuesday',lbl:'Vision · II of III',adv:"Now zoom in. Not the Instagram version — the lived version. One ordinary Tuesday inside that life. What does it look like?",q:"Describe one ordinary Tuesday inside that life.",type:'area',ph:'On a Tuesday in that life, I...',fog:"The Tuesday is fog. We'll build toward it one turn at a time."},
+  {id:'win',lbl:'Vision · III of III',adv:"January is the turn timer. I'm not asking you to solve everything. I'm asking you to define what winning looks like for you, in your own words. It can be bigger than a job.",q:"Your January win condition — what does winning look like?",type:'text',ph:'By January, I will have...',fog:"The win condition is pending. The campaign will sharpen it."},
+  {id:'fear',lbl:'Obstacles · I of III',adv:"Every civilization has barbarians at the gate. The ones that destroy empires are the fears you haven't named yet. Name yours. The real one.",q:"Name your biggest fear right now. Your main barbarian.",type:'text',ph:'My real fear is...',fog:"The fear has no name yet. We mark it as 'The Unnamed Barbarian' and keep watch."},
+  {id:'false_story',lbl:'Obstacles · II of III',adv:"Every fear tells a story. 'It's too late.' 'I'm not the kind of person who does that.' 'Everyone will see me fail.' What story does your barbarian tell you?",q:"What false story does that fear tell you?",type:'text',ph:'It tells me that...',fog:"The story is unnamed. We'll find it when the barbarian shows itself."},
+  {id:'evidence',lbl:'Obstacles · III of III',adv:"Good. Now argue back. Your own record — the things you've done, said, survived, and figured out — is evidence against that story. What does your record say?",q:"What evidence from your own life proves that story wrong?",type:'area',ph:'Evidence against the story: I once...',fog:"No evidence comes right now. The campaign is the evidence-gathering operation."},
+  {id:'hist',lbl:'Network · I of III',adv:"The Council of Greats is the most powerful room in any civilization. I am one seat at that table. Who from history or fiction would you want in the others?",q:"Name one person from history or fiction you'd want advising your empire.",type:'text',ph:'My historical advisor is...',fog:"The council seat is empty for now. The campaign will fill it."},
+  {id:'contact',lbl:'Network · II of III',adv:"Your network is a set of trade routes — most of them untraveled. There is someone you've been meaning to reach out to. You know their name. You haven't sent it. Who is it?",q:"Name one real person you've been meaning to contact.",type:'text',ph:'Their name is...',fog:"The contact is unnamed. We mark the trade route as available but untraveled."},
+  {id:'ask',lbl:'Network · III of III',adv:"Last one. What is the exact ask? Not a vague catch-up — an actual thing you want from them. One sentence. If you can write it here, you can send it tomorrow.",q:"What's the exact ask you'd make of that person?",type:'text',ph:'I would ask them to...',fog:"The ask is unwritten. We'll draft it together in the Diplomacy quest."},
+];
+
+const TIPS=[
+  "Think tanks hire Hill staffers for their relationships, not just their policy knowledge. Your network is your resume.",
+  "A cold LinkedIn message under three sentences gets read. Over three sentences gets skipped.",
+  "The best time to network is before you need something. You're doing this at exactly the right time.",
+  "Clarity is a destination, not a starting point. You don't find it and then act — you act and then it arrives.",
+  "Natsec and Asia policy orgs hire for understanding, not credentials. Your Hill time is rare.",
+  "One sentence sent to one person today outweighs a perfect resume sitting in a folder.",
+  "Being between ages is not the same as being stuck. It means the next chapter hasn't been written yet.",
+  "The campaign doesn't ask you to be ready. It asks you to begin."
+];
+
+const REWARDS=[
+  {milestone:"First deed logged",title:"The Crown's First Tribute",desc:"One episode of any show, chosen by the Leader, watched together without interruption.",locked:true},
+  {milestone:"3-day streak",title:"The Hearth Decree",desc:"One home-cooked meal of the Leader's choosing, prepared without complaint.",locked:true},
+  {milestone:"First Han territory reclaimed",title:"The Victor's Spoils",desc:"One night off from dishes, full exemption, no questions asked.",locked:true},
+  {milestone:"Age II unlocked",title:"The Cinema Accord",desc:"One movie night, Leader's pick, full snack spread provided.",locked:true},
+  {milestone:"7-day streak",title:"The Crown's Devotion",desc:"One act of physical devotion, redeemable at the Leader's discretion.",locked:true},
+  {milestone:"Age IV unlocked",title:"The Expedition Decree",desc:"One day trip, destination chosen by the Leader.",locked:true},
+  {milestone:"First networking email sent",title:"The Diplomat's Reward",desc:"One back massage, no time limit.",locked:true},
+  {milestone:"January win condition met",title:"The Sovereign's Claim",desc:"Whatever the Leader wants. He's earned it.",locked:true},
+];
+
+// STATE
+let answers = {};
+let gameData = {ip:0,streak:0,turn:1,teddyPct:4,rivalPct:2,journalEntries:[],ageIdx:0};
+let curQ = 0;
+let twTimer = null;
+let advMini = false;
+let demoMode = true;
+
+const AGES=[
+  {name:"Age I — The Settlement",sub:"Village & outpost",threshold:0},
+  {name:"Age II — The Village",sub:"Community forms",threshold:100},
+  {name:"Age III — The Town",sub:"Districts unlock",threshold:250},
+  {name:"Age IV — The City-State",sub:"Council of Greats",threshold:500},
+  {name:"Age V — The Kingdom",sub:"Realm expands",threshold:900},
+  {name:"Age VI — The Empire",sub:"Accelerated growth",threshold:1400},
+  {name:"Age VII — The Dynasty",sub:"Rival slows",threshold:2000},
+  {name:"Age VIII — The Legacy",sub:"Final chapter",threshold:2800},
+];
+
+// ── LOAD SCREEN ──
+window.addEventListener('load',()=>{
+  const tip = TIPS[Math.floor(Math.random()*TIPS.length)];
+  typeText(document.getElementById('ls-tip'), tip, 20);
+  setTimeout(()=>document.getElementById('ls-btn').classList.add('show'), 3000);
+});
+
+function enterOnboarding(){
+  // Check if already has saved answers
+  const saved = localStorage.getItem('cov_answers');
+  if(saved){
+    answers = JSON.parse(saved);
+    demoMode = false;
+    fadeToGame();
+    return;
+  }
+  document.getElementById('load-screen').classList.add('out');
+  setTimeout(()=>{
+    document.getElementById('load-screen').style.display='none';
+    document.getElementById('onboarding').classList.add('active');
+    renderQ(0, false);
+  },900);
+}
+
+// ── ONBOARDING ──
+function blockOf(i){for(let b=0;b<BLOCKS.length;b++)if(BLOCKS[b].qs.includes(i))return b;return 0;}
+
+function updateOBHeader(){
+  const b=blockOf(curQ);
+  document.getElementById('ob-blk-lbl').textContent=BLOCKS[b].label;
+  document.getElementById('ob-prog-fill').style.width=Math.round((curQ/QS.length)*100)+'%';
+  document.getElementById('ob-dots').innerHTML=BLOCKS.map((bl,i)=>{
+    let c='ob-dot';
+    if(i<b)c+=' done';else if(i===b)c+=' active';
+    return `<div class="${c}"></div>`;
+  }).join('');
+}
+
+function typeText(el, text, speed, cb){
+  if(twTimer)clearInterval(twTimer);
+  el.innerHTML='';
+  let i=0;
+  twTimer=setInterval(()=>{
+    if(i<text.length){
+      el.innerHTML=text.slice(0,i+1)+'<span class="ob-cursor"></span>';
+      i++;
+    }else{
+      el.innerHTML=text;
+      clearInterval(twTimer);
+      if(cb)cb();
+    }
+  },speed||16);
+}
+
+function renderQ(idx, skipAdv){
+  const q=QS[idx];
+  const card=document.getElementById('ob-card');
+  card.classList.remove('vis');
+  document.getElementById('ob-qlbl').textContent=q.lbl;
+  document.getElementById('ob-qtxt').textContent=q.q;
+  document.getElementById('ob-fog-btn').style.display=q.fog?'block':'none';
+  document.getElementById('ob-back').style.visibility=idx===0?'hidden':'visible';
+  const area=document.getElementById('ob-answer');
+  area.innerHTML='';
+
+  if(q.type==='text'||q.type==='area'){
+    const el=q.type==='area'?document.createElement('textarea'):document.createElement('input');
+    el.className='ob-input';el.placeholder=q.ph;
+    if(q.type==='area')el.rows=3;else el.type='text';
+    el.value=answers[q.id]||'';
+    el.addEventListener('input',()=>{answers[q.id]=el.value;});
+    if(q.type==='text')el.addEventListener('keydown',e=>{if(e.key==='Enter')goNext();});
+    area.appendChild(el);
+    setTimeout(()=>el.focus(),550);
+  } else {
+    if(q.type==='multi'&&!answers[q.id])answers[q.id]=[];
+    const wrap=document.createElement('div');wrap.className='ob-chips';
+    q.opts.forEach((opt,i)=>{
+      const btn=document.createElement('button');
+      btn.setAttribute('type','button');
+      let cls='ob-chip';
+      if(q.type==='era')cls+=' era';
+      btn.className=cls;
+      if(q.type==='era'&&q.subs)btn.innerHTML=opt+'<span class="ob-chip-sub">'+q.subs[i]+'</span>';
+      else btn.textContent=opt;
+      const isSel=q.type==='multi'?(answers[q.id]||[]).includes(opt):(answers[q.id]===opt);
+      if(isSel)btn.classList.add('sel');
+      btn.addEventListener('click',()=>{
+        if(q.type==='multi'){
+          if(!answers[q.id])answers[q.id]=[];
+          btn.classList.toggle('sel');
+          if(btn.classList.contains('sel')){if(!answers[q.id].includes(opt))answers[q.id].push(opt);}
+          else{answers[q.id]=answers[q.id].filter(x=>x!==opt);}
+        }else{
+          wrap.querySelectorAll('.ob-chip').forEach(c=>c.classList.remove('sel'));
+          btn.classList.add('sel');answers[q.id]=opt;
+        }
+      });
+      wrap.appendChild(btn);
+    });
+    area.appendChild(wrap);
+  }
+
+  const show=()=>setTimeout(()=>card.classList.add('vis'),80);
+  if(skipAdv){document.getElementById('ob-adv').innerHTML=q.adv;show();}
+  else typeText(document.getElementById('ob-adv'),q.adv,15,show);
+  updateOBHeader();
+}
+
+function fogIt(){
+  const q=QS[curQ];answers[q.id]='__fog__';
+  document.getElementById('ob-card').classList.remove('vis');
+  typeText(document.getElementById('ob-adv'),q.fog,15,()=>setTimeout(advance,700));
+}
+
+function goNext(){
+  const q=QS[curQ];
+  if((q.type==='single'||q.type==='era')&&!answers[q.id]){
+    const first=document.querySelector('.ob-chip');
+    if(first){first.click();setTimeout(advance,200);}
+    return;
+  }
+  advance();
+}
+
+function goBack(){if(curQ===0)return;curQ--;renderQ(curQ,true);}
+
+function advance(){
+  const prevB=blockOf(curQ);curQ++;
+  if(curQ>=QS.length){showFinale();return;}
+  const nextB=blockOf(curQ);
+  if(nextB!==prevB){
+    const bt=document.getElementById('ob-bt');
+    document.getElementById('ob-bt-lbl').textContent=BLOCKS[nextB].label;
+    bt.classList.add('show');
+    setTimeout(()=>{bt.classList.remove('show');renderQ(curQ,false);},1300);
+  }else renderQ(curQ,false);
+}
+
+function showFinale(){
+  const civ=answers['civ_name']||'The Unnamed Civilization';
+  const rival=answers['rival']||'the Joseon Kingdom';
+  const win=answers['win']&&answers['win']!=='__fog__'?answers['win']:'forward motion';
+  document.getElementById('fin-civ').textContent=civ+' · vs '+rival;
+  document.getElementById('fin-mono').textContent=`${civ} is founded. I have the map of who you are — your traits, your creed, your vision, your fear, your people. The ${rival} is already moving. But so are you. You told me your win condition is: "${win}." That is not a wish. That is now a declaration of war against drift. The campaign begins on the next screen. I will be watching.`;
+  document.getElementById('ob-finale').classList.add('show');
+  localStorage.setItem('cov_answers',JSON.stringify(answers));
+  demoMode=false;
+}
+
+function fadeToGame(){
+  document.getElementById('load-screen').classList.add('out');
+  setTimeout(()=>{
+    document.getElementById('load-screen').style.display='none';
+    document.getElementById('onboarding').classList.remove('active');
+    launchGame();
+  },900);
+}
+
+function enterGame(){
+  document.getElementById('ob-finale').classList.remove('show');
+  document.getElementById('onboarding').classList.remove('active');
+  launchGame();
+}
+
+// ── GAME ──
+function launchGame(){
+  const a = demoMode ? DEMO_ANSWERS : (Object.keys(answers).length ? answers : DEMO_ANSWERS);
+  document.getElementById('game').classList.add('active');
+  updateSidebar(a);
+  populateChronicle(a);
+  renderRewards();
+  drawHexMap();
+  generateDailyQuest(a);
+  generateAdvisorOpening(a);
+}
+
+function updateSidebar(a){
+  const rival=a.rival||'Joseon Korea';
+  document.getElementById('sb-r-name').textContent=rival;
+  document.getElementById('tb-age-lbl').textContent='Age I · The Settlement';
+  document.getElementById('sb-xp-lbl').textContent='0 / 100 IP to Age II';
+}
+
+function populateChronicle(a){
+  document.getElementById('chr-civ-title').textContent=a.civ_name||'Your Civilization';
+  document.getElementById('chr-sub').textContent='Age I · The Settlement · vs '+(a.rival||'Joseon Korea');
+  const sections=[
+    {title:'Identity',rows:[
+      ['Civilization',a.civ_name],['Leader Traits',Array.isArray(a.traits)?a.traits.join(', '):a.traits],
+      ['Personal Creed',a.creed],['Rival',a.rival],
+    ]},
+    {title:'Reality',rows:[
+      ['Current Era',a.era],['Proud of',a.proud],['Avoiding',a.avoiding],
+    ]},
+    {title:'Vision',rows:[
+      ['Great Vision',a.vision],['Ordinary Tuesday',a.tuesday],['January Win Condition',a.win],
+    ]},
+    {title:'Obstacles',rows:[
+      ['Main Fear (Barbarian)',a.fear],['False Story it Tells',a.false_story],['Evidence Against It',a.evidence],
+    ]},
+    {title:'Network',rows:[
+      ['Historical Advisor',a.hist],['Real Contact',a.contact],['The Ask',a.ask],
+    ]},
+  ];
+  document.getElementById('chr-content').innerHTML=sections.map(s=>`
+    <div class="chr-section">
+      <div class="chr-section-title">${s.title}</div>
+      ${s.rows.map(([k,v])=>`<div class="chr-row"><div class="chr-key">${k}</div><div class="chr-val">${v&&v!=='__fog__'?v:'<em style="color:var(--gold-dim)">In the fog — to be discovered</em>'}</div></div>`).join('')}
+    </div>`).join('');
+}
+
+function renderRewards(){
+  document.getElementById('rewards-list').innerHTML=REWARDS.map(r=>`
+    <div class="reward-card${r.locked?'':' unlocked'}">
+      <div class="reward-milestone">Unlocks: ${r.milestone}</div>
+      <div class="reward-title">${r.title}</div>
+      <div class="reward-desc">${r.desc}</div>
+      ${r.locked?'<div class="reward-locked">🔒 Locked</div>':'<button class="reward-claim">Claim Decree</button>'}
+    </div>`).join('');
+}
+
+// ── ADVISOR AI ──
+async function callAdvisor(systemPrompt, userMessage){
+  if(ANTHROPIC_API_KEY==='YOUR_API_KEY_HERE'){
+    return "The campaign is ready. Your answers are saved. Replace YOUR_API_KEY_HERE in the HTML file with your real Anthropic API key to activate the Advisor's intelligence.";
+  }
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,system:systemPrompt,messages:[{role:'user',content:userMessage}]})
+    });
+    const data=await resp.json();
+    return data.content?.[0]?.text||'The Advisor is gathering her thoughts...';
+  }catch(e){
+    return 'The Advisor cannot reach the realm right now. Try again shortly.';
+  }
+}
+
+function buildAdvisorSystem(a){
+  const ans = demoMode ? DEMO_ANSWERS : a;
+  return `You are The Sage — an ancient, theatrical wizard-advisor, warm but unwilling to let the player off the hook. You are a loving parody of the player's girlfriend who built this game for him.
+
+The player is Teddy — 27 years old, Legislative Assistant on Capitol Hill, whose member of Congress is retiring in January. He has a background in Asia policy and international relations. He loves strategy games like Civilization VI.
+
+His civilization is called: ${ans.civ_name||'unnamed'}
+His rival is: ${ans.rival||'Joseon Korea'}
+His leader traits: ${Array.isArray(ans.traits)?ans.traits.join(', '):ans.traits||'unknown'}
+His creed: ${ans.creed||'not yet written'}
+His current era: ${ans.era||'unknown'}
+His Great Vision: ${ans.vision||'in the fog'}
+His January win condition: ${ans.win||'in the fog'}
+His main fear (barbarian): ${ans.fear||'unnamed'}
+The false story his fear tells him: ${ans.false_story||'unnamed'}
+His evidence against it: ${ans.evidence||'none yet'}
+His real contact he needs to reach: ${ans.contact||'unnamed'}
+His ask of that contact: ${ans.ask||'unwritten'}
+
+Always speak in the grand-strategy metaphor. Use Teddy's name. Quote his actual answers back to him. Keep responses under 3 sentences. Be warm but push him. Never be generic.`;
+}
+
+async function generateAdvisorOpening(a){
+  const el=document.getElementById('adv-dialogue');
+  el.innerHTML='<div class="adv-loading">The Advisor is watching...</div>';
+  const sys=buildAdvisorSystem(a);
+  const msg=`Give Teddy a brief opening dispatch as he begins the campaign. Reference his civilization name, his rival, and one specific thing from his answers — either his fear, his avoiding, or his win condition. Make it feel personal and urgent. 2-3 sentences maximum.`;
+  const resp=await callAdvisor(sys,msg);
+  typeText(el,resp,20);
+}
+
+async function generateDailyQuest(a){
+  const el=document.getElementById('sb-quest-txt');
+  const jlbl=document.getElementById('j-quest-lbl');
+  el.textContent='Generating your quest...';
+  const sys=buildAdvisorSystem(a);
+  const msg=`Generate ONE specific daily quest for Teddy. It must reference something from his actual answers — his contact, his fear, his vision, his avoiding, or his win condition. Make it concrete and actionable — something he can do today. One sentence, quest format. No preamble.`;
+  const resp=await callAdvisor(sys,msg);
+  el.textContent=resp;
+  if(jlbl)jlbl.textContent='Today\'s Quest — '+resp;
+}
+
+async function getAdvisorReaction(entry, a){
+  const el=document.getElementById('adv-dialogue');
+  el.innerHTML='<div class="adv-loading">The Advisor responds...</div>';
+  const sys=buildAdvisorSystem(a);
+  const msg=`Teddy just logged this deed in his War Journal: "${entry}". React in character — warmly but with push. If it connects to something he wrote in his onboarding (his fear, his creed, his contact, his vision), quote it back to him. 2 sentences max.`;
+  const resp=await callAdvisor(sys,msg);
+  typeText(el,resp,20);
+}
+
+// ── JOURNAL ──
+function saveEntry(){
+  const input=document.getElementById('j-input');
+  const text=input.value.trim();
+  if(!text)return;
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  gameData.journalEntries.unshift({date:dateStr,text});
+  input.value='';
+  gameData.ip+=12;
+  document.getElementById('tb-ip').textContent=gameData.ip;
+  document.getElementById('sb-xp').style.width=Math.min(100,gameData.ip)+'%';
+  document.getElementById('sb-xp-lbl').textContent=gameData.ip+' / 100 IP to Age II';
+  renderJournalPast();
+  const a=demoMode?DEMO_ANSWERS:answers;
+  getAdvisorReaction(text,a);
+  localStorage.setItem('cov_gamedata',JSON.stringify(gameData));
+  // Unlock first reward
+  if(gameData.journalEntries.length===1){
+    REWARDS[0].locked=false;renderRewards();
+  }
+}
+
+function renderJournalPast(){
+  const c=document.getElementById('j-past');
+  if(!gameData.journalEntries.length){
+    c.innerHTML='<div style="font-style:italic;color:var(--parchment-dark);font-size:13px;">No entries yet. Your Chronicle begins when you write.</div>';
+    return;
+  }
+  c.innerHTML=gameData.journalEntries.map(e=>`<div class="j-past"><div class="j-past-date">${e.date}</div><div class="j-past-txt">${e.text}</div></div>`).join('');
+}
+
+// ── MAP ──
+function drawHexMap(){
+  const canvas=document.getElementById('hex-canvas');
+  const container=document.getElementById('map-area');
+  canvas.width=container.offsetWidth;
+  canvas.height=container.offsetHeight;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const sz=36;
+  const hW=sz*2,hH=Math.sqrt(3)*sz;
+  const cols=Math.ceil(W/(hW*0.75))+2;
+  const rows=Math.ceil(H/hH)+2;
+
+  const tHexes=new Set(['2,1','3,1','2,2','3,2','4,2','2,3']);
+  const rHexes=new Set(['8,1','9,1','9,2','8,0']);
+
+  function hexPath(cx,cy,s){
+    ctx.beginPath();
+    for(let i=0;i<6;i++){
+      const a=Math.PI/180*(60*i-30);
+      const x=cx+s*Math.cos(a),y=cy+s*Math.sin(a);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+  }
+
+  ctx.fillStyle='#0B1A18';ctx.fillRect(0,0,W,H);
+
+  for(let r=-1;r<rows;r++){
+    for(let c=-1;c<cols;c++){
+      const cx=c*hW*0.75+sz;
+      const cy=r*hH+(c%2===0?0:hH/2)+hH/2;
+      const key=`${c},${r}`;
+      hexPath(cx,cy,sz-1);
+      if(tHexes.has(key)){
+        ctx.fillStyle='rgba(27,77,74,0.65)';ctx.fill();
+        ctx.strokeStyle='#3D8B86';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle='#C9963A';ctx.font='13px serif';
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('泰',cx,cy);
+      } else if(rHexes.has(key)){
+        ctx.fillStyle='rgba(139,26,26,0.5)';ctx.fill();
+        ctx.strokeStyle='#8B1A1A';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle='#C0392B';ctx.font='12px serif';
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('朝',cx,cy);
+      } else {
+        const edge=(c<1||r<1||c>cols-3||r>rows-3);
+        ctx.fillStyle=edge?'rgba(10,12,15,0.65)':'rgba(15,26,24,0.4)';ctx.fill();
+        ctx.strokeStyle='rgba(201,150,58,0.07)';ctx.lineWidth=0.5;ctx.stroke();
+      }
+    }
+  }
+  // Ambient glows
+  const tg=ctx.createRadialGradient(W*0.18,H*0.2,0,W*0.18,H*0.2,W*0.35);
+  tg.addColorStop(0,'rgba(27,77,74,0.1)');tg.addColorStop(1,'transparent');
+  ctx.fillStyle=tg;ctx.fillRect(0,0,W,H);
+  const rg=ctx.createRadialGradient(W*0.82,H*0.18,0,W*0.82,H*0.18,W*0.28);
+  rg.addColorStop(0,'rgba(139,26,26,0.14)');rg.addColorStop(1,'transparent');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+}
+
+// ── NAVIGATION ──
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active'));
+  if(name==='map'){document.querySelector('.tb-btn').classList.add('active');return;}
+  const el=document.getElementById('page-'+name);
+  if(el)el.classList.add('open');
+  renderJournalPast();
+}
+
+function closePage(name){
+  const el=document.getElementById('page-'+name);
+  if(el)el.classList.remove('open');
+}
+
+function toggleAdvisor(){
+  const panel=document.getElementById('adv-panel');
+  const body=document.getElementById('adv-body');
+  advMini=!advMini;
+  if(advMini){
+    body.style.display='none';panel.classList.add('mini');
+    panel.onclick=()=>{if(advMini)toggleAdvisor();};
+  }else{
+    body.style.display='block';panel.classList.remove('mini');panel.onclick=null;
+  }
+}
+
+// Load saved game data if exists
+const savedGame=localStorage.getItem('cov_gamedata');
+if(savedGame){Object.assign(gameData,JSON.parse(savedGame));}
+
+window.addEventListener('resize',()=>{
+  if(document.getElementById('game').classList.contains('active'))drawHexMap();
+});
+</script>
+</body>
+</html>
